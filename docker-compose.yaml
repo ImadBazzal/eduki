@@ -1,0 +1,40 @@
+version: '3.3'
+
+volumes:
+    mysql:
+        driver: local
+
+services:
+    php-fpm:
+        build:
+            context: ./docker/php-fpm
+        volumes:
+            - ./:/data/application:delegated
+        environment:
+            XDEBUG_MODE: "debug"
+            XDEBUG_SESSION: eduki
+            PHP_IDE_CONFIG: "serverName=eduki"
+
+    nginx:
+        image: nginx:alpine
+        volumes:
+            - ./:/data/application:delegated
+            - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+
+        ports:
+            - "${PORT:-80}:80"
+
+    mysql:
+        image: mysql:8.0
+        command:
+            - "--sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+            - "--default_authentication_plugin=mysql_native_password"
+        environment:
+            MYSQL_ROOT_PASSWORD: 'root'
+
+    tests:
+        image: "lehrermarktplatz/php-dev-test:latest"
+        command: [ "-s", "basic" ]
+        environment:
+            APP_HOST: "nginx"
+            APP_PORT: "80"
